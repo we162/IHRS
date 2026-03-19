@@ -11,9 +11,11 @@ end_time: String,
 slots: Number,
 experience_level: { type: String, default: 'Beginner' },
 ride_type: { type: String, default: 'Arena Training' },
+amount: { type: Number, default: 0 },
 status: {
-type: String,
-default: "confirmed"
+  type: String,
+  enum: ['confirmed', 'pending', 'cancelled', 'ride_completed'],
+  default: 'confirmed'
 }
 },
 { timestamps: true }

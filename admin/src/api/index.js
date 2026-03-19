@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -16,7 +16,7 @@ export const deleteAdmin = (id) => api.delete(`/admin/users/${id}`);
 export const getBookings = () => api.get('/bookings');
 export const createBooking = (bookingData) => api.post('/bookings', bookingData);
 export const deleteBooking = (id) => api.delete(`/bookings/${id}`);
-export const cancelBooking = (id) => api.patch(`/bookings/cancel/${id}`);
+export const updateBookingStatus = (id, status, amount) => api.patch(`/bookings/${id}/status`, { status, amount });
 export const getBookingStats = () => api.get('/bookings/stats');
 
 // Gallery

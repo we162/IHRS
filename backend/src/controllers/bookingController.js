@@ -96,41 +96,100 @@ res.json({message:"Booking deleted"});
 };
 
 
-exports.cancelBooking = async(req,res)=>{
+exports.updateStatus = async (req, res) => {
+  try {
+    const { status, amount } = req.body;
+    const validStatuses = ['confirmed', 'pending', 'cancelled', 'ride_completed'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
 
-const booking = await Booking.findByIdAndUpdate(
-req.params.id,
-{status:"cancelled"},
-{new:true}
-);
+    const updateData = { status };
+    if (status === 'ride_completed' && amount) {
+      updateData.amount = Number(amount);
+    }
 
-res.json(booking);
-
+    const booking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true }
+    );
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+    res.json(booking);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 
-exports.getBookingStats = async(req,res)=>{
+exports.getBookingStats = async (req, res) => {
+  try {
+    const now = new Date();
 
-const total = await Booking.countDocuments();
+    // Today range
+    const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+    const todayEnd   = new Date(now); todayEnd.setHours(23, 59, 59, 999);
 
-const today = new Date();
-today.setHours(0,0,0,0);
+    // Yesterday range
+    const yestStart = new Date(todayStart); yestStart.setDate(yestStart.getDate() - 1);
+    const yestEnd   = new Date(todayEnd);   yestEnd.setDate(yestEnd.getDate() - 1);
 
-const todayBookings = await Booking.countDocuments({
-createdAt:{$gte:today}
-});
+    // This week (last 7 days, Mon→Sun)
+    const weekStart = new Date(todayStart); weekStart.setDate(weekStart.getDate() - 6);
 
-const week = new Date();
-week.setDate(week.getDate()-7);
+    // This month
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-const weeklyBookings = await Booking.countDocuments({
-createdAt:{$gte:week}
-});
+    const [total, todayBookings, yesterdayBookings, weeklyBookings, monthlyBookings] =
+      await Promise.all([
+        Booking.countDocuments(),
+        Booking.countDocuments({ createdAt: { $gte: todayStart, $lte: todayEnd } }),
+        Booking.countDocuments({ createdAt: { $gte: yestStart,  $lte: yestEnd  } }),
+        Booking.countDocuments({ createdAt: { $gte: weekStart,  $lte: todayEnd } }),
+        Booking.countDocuments({ createdAt: { $gte: monthStart, $lte: todayEnd } }),
+      ]);
 
-res.json({
-total,
-todayBookings,
-weeklyBookings
-});
+    // Real revenue: sum of amount where status = ride_completed
+    const revenueAgg = await Booking.aggregate([
+      { $match: { status: 'ride_completed' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+    const totalRevenue = revenueAgg.length ? revenueAgg[0].total : 0;
 
+    // Last 7 days bookings count per day for chart
+    const last7 = [];
+    for (let i = 6; i >= 0; i--) {
+      const dayStart = new Date(todayStart); dayStart.setDate(dayStart.getDate() - i);
+      const dayEnd   = new Date(dayStart);   dayEnd.setHours(23, 59, 59, 999);
+      const count = await Booking.countDocuments({ createdAt: { $gte: dayStart, $lte: dayEnd } });
+      const label = dayStart.toLocaleDateString('en-IN', { weekday: 'short' });
+      last7.push({ name: label, bookings: count });
+    }
+
+    // Ride type distribution
+    const rideTypeAgg = await Booking.aggregate([
+      { $group: { _id: '$ride_type', count: { $sum: 1 } } }
+    ]);
+    const rideTypes = rideTypeAgg.map(r => ({ name: r._id || 'Unknown', value: r.count }));
+
+    // Status distribution
+    const statusAgg = await Booking.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+    const statusDist = statusAgg.map(s => ({ status: s._id, count: s.count }));
+
+    res.json({
+      total,
+      todayBookings,
+      yesterdayBookings,
+      weeklyBookings,
+      monthlyBookings,
+      totalRevenue,
+      last7DaysChart: last7,
+      rideTypeDistribution: rideTypes,
+      statusDistribution: statusDist,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
