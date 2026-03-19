@@ -1,16 +1,16 @@
 const sendBookingEmail = require("./ emailService");
 const sendWhatsappMessage = require("./whatsappService");
 
-const sendNotifications = async(booking)=>{
+const sendNotifications = async (booking) => {
 
-try {
-  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-    await sendBookingEmail(booking.email,booking);
-  } else {
-    console.log("Skipping email notification, missing config");
-  }
+  try {
+    if (process.env.BREVO_API_KEY) {
+      await sendBookingEmail(booking.email, booking);
+    } else {
+      console.log("⚠️  Skipping email notification — BREVO_API_KEY not set");
+    }
 
-  const message = `
+    const message = `
 
   Horse Riding Booking Confirmed 🐎
 
@@ -22,14 +22,14 @@ try {
 
   `;
 
-  if (process.env.TWILIO_SID && process.env.TWILIO_TOKEN) {
-    await sendWhatsappMessage(booking.phone,message);
-  } else {
-    console.log("Skipping whatsapp notification, missing config");
+    if (process.env.TWILIO_SID && process.env.TWILIO_TOKEN) {
+      await sendWhatsappMessage(booking.phone, message);
+    } else {
+      console.log("Skipping whatsapp notification, missing config");
+    }
+  } catch (e) {
+    console.log("Notification service error:", e);
   }
-} catch (e) {
-  console.log("Notification service error:", e);
-}
 
 };
 
