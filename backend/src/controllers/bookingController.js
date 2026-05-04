@@ -178,6 +178,24 @@ exports.getBookingStats = async (req, res) => {
     ]);
     const statusDist = statusAgg.map(s => ({ status: s._id, count: s.count }));
 
+    // Month-wise revenue
+    const monthWiseRevenueAgg = await Booking.aggregate([
+      { $match: { status: 'ride_completed' } },
+      { 
+        $group: { 
+          _id: { $month: "$createdAt" }, 
+          revenue: { $sum: "$amount" } 
+        } 
+      },
+      { $sort: { "_id": 1 } }
+    ]);
+
+    const monthsArray = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthlyRevenueChart = monthsArray.map((m, i) => {
+      const found = monthWiseRevenueAgg.find(x => x._id === i + 1);
+      return { name: m, revenue: found ? found.revenue : 0 };
+    });
+
     res.json({
       total,
       todayBookings,
@@ -188,6 +206,7 @@ exports.getBookingStats = async (req, res) => {
       last7DaysChart: last7,
       rideTypeDistribution: rideTypes,
       statusDistribution: statusDist,
+      monthlyRevenueChart: monthlyRevenueChart,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

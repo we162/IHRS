@@ -10,7 +10,9 @@ const settingsSchema = new mongoose.Schema({
   morningEnd: { type: String, default: "11:00" },
   eveningStart: { type: String, default: "16:00" },
   eveningEnd: { type: String, default: "19:00" },
-  slotDuration: { type: Number, default: 45 }
+  slotDuration: { type: Number, default: 45 },
+  holidays: { type: [String], default: [] },
+  monthlyDiscounts: { type: Object, default: {} }
 }, { timestamps: true });
 
 module.exports = mongoose.model("Settings", settingsSchema);

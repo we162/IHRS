@@ -124,6 +124,14 @@ const Dashboard = () => {
     },
   ] : [];
 
+  // Monthly revenue logic filter
+  const [selectedMonth, setSelectedMonth] = useState('All');
+  const monthlyRevenueData = stats?.monthlyRevenueChart || [];
+  
+  const currentMonthRevenue = selectedMonth === 'All' 
+    ? stats?.totalRevenue ?? 0 
+    : (monthlyRevenueData.find(m => m.name === selectedMonth)?.revenue || 0);
+
   // Status distribution for Pie
   const pieData = stats?.statusDistribution?.map(s => ({
     name: s.status === 'ride_completed' ? 'Completed' : s.status.charAt(0).toUpperCase() + s.status.slice(1),
@@ -157,6 +165,22 @@ const Dashboard = () => {
           <p className="text-gray-500 text-sm mt-1">
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="text-gray-400 text-sm">Month Revenue:</label>
+          <select 
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="bg-[#111111] border border-[#2C2C2C] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#FF6B00]"
+          >
+            <option value="All">All Time</option>
+            {monthlyRevenueData.map(m => (
+              <option key={m.name} value={m.name}>{m.name}</option>
+            ))}
+          </select>
+          <div className="bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 px-4 py-2 rounded-lg font-bold">
+            ₹{currentMonthRevenue.toLocaleString('en-IN')}
+          </div>
         </div>
       </div>
 
@@ -231,6 +255,28 @@ const Dashboard = () => {
                 {entry.name} ({entry.value})
               </span>
             ))}
+          </div>
+        </motion.div>
+        
+        {/* Monthly Revenue Chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.48, duration: 0.5 }}
+          className="bg-[#1E1E1E] rounded-2xl p-6 border border-[#2C2C2C] shadow-lg"
+        >
+          <h3 className="text-base font-heading font-semibold text-white mb-1">Monthly Revenue</h3>
+          <p className="text-gray-500 text-xs mb-5">Revenue broken down by month</p>
+          <div className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyRevenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2C2C2C" vertical={false} />
+                <XAxis dataKey="name" stroke="#555" tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis stroke="#555" tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="revenue" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={30} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </motion.div>
       </div>

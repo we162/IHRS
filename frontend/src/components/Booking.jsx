@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SectionTitle from './SectionTitle';
 import Button from './Button';
-import { Calendar, Clock, CheckCircle, ArrowRight } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, ArrowRight, CalendarOff, Percent } from 'lucide-react';
 import { checkAvailability, createBooking } from '../api';
 
 const Booking = ({ settings }) => {
@@ -109,6 +109,10 @@ const Booking = ({ settings }) => {
     }
   };
 
+  const isHoliday = formData.date && settings?.holidays?.includes(formData.date);
+  const selectedMonthNum = formData.date ? parseInt(formData.date.split('-')[1], 10) : null;
+  const activeDiscount = selectedMonthNum && settings?.monthlyDiscounts ? settings.monthlyDiscounts[selectedMonthNum] : 0;
+
   return (
     <section id="booking" className="py-24 bg-primary relative overflow-hidden flex items-center min-h-[900px]">
       {/* Background Decor */}
@@ -139,6 +143,12 @@ const Booking = ({ settings }) => {
                 <div className="p-8 border border-dashed border-light-gray/40 rounded-xl flex flex-col items-center justify-center text-center bg-primary/20">
                   <Calendar size={32} className="text-white/30 mb-3" />
                   <p className="text-white/50 text-sm">Please select a preferred date in the form to view real-time slot availability.</p>
+                </div>
+              ) : isHoliday ? (
+                <div className="p-8 border border-dashed border-red-500/40 rounded-xl flex flex-col items-center justify-center text-center bg-red-500/10">
+                  <CalendarOff size={32} className="text-red-500/60 mb-3" />
+                  <p className="text-red-400 font-medium">This date is a holiday.</p>
+                  <p className="text-red-400/70 text-sm mt-1">Bookings are closed for this day.</p>
                 </div>
               ) : slots.length === 0 ? (
                 <div className="p-8 border border-dashed border-light-gray/40 rounded-xl flex flex-col items-center justify-center text-center bg-primary/20">
@@ -223,7 +233,23 @@ const Booking = ({ settings }) => {
                 >
                   <div className="absolute top-0 right-10 w-32 h-1 bg-gradient-to-r from-accent to-[#FF8C00] rounded-b-lg"></div>
                   
-                  <h3 className="text-2xl font-heading text-white mb-8">Booking Details</h3>
+                  <h3 className="text-2xl font-heading text-white mb-6">Booking Details</h3>
+
+                  {activeDiscount > 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 flex items-center gap-3 mb-6 shadow-[0_4px_20px_rgba(34,197,94,0.1)]"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                        <Percent size={18} className="text-green-400" />
+                      </div>
+                      <div>
+                        <p className="text-green-400 font-bold text-sm">Special Offer Applied!</p>
+                        <p className="text-green-500/80 text-xs mt-0.5">You've unlocked a {activeDiscount}% discount for bookings in this month.</p>
+                      </div>
+                    </motion.div>
+                  )}
                   
                   <form className="space-y-6 h-full" onSubmit={handleSubmit}>
                     
@@ -309,7 +335,7 @@ const Booking = ({ settings }) => {
                     <button 
                       type="submit" 
                       className="w-full bg-accent hover:bg-[#FF8C00] text-white font-semibold flex items-center justify-center gap-3 py-4 rounded-2xl mt-4 transition-all shadow-[0_0_20px_rgba(255,107,0,0.3)] hover:shadow-[0_0_30px_rgba(255,107,0,0.5)] disabled:opacity-50 disabled:cursor-not-allowed group/btn" 
-                      disabled={loading || !formData.date || !selectedSlot}
+                      disabled={loading || !formData.date || !selectedSlot || isHoliday}
                     >
                       {loading ? 'Processing...' : (
                         <>
